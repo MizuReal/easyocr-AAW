@@ -7,6 +7,7 @@ from fastapi.responses import HTMLResponse
 from app.core.config import get_settings
 from app.routes.ocr import router as ocr_router
 from app.routes.fiducial import router as fiducial_router
+from app.routes.predict import router as predict_router
 
 # Enable debug logging for fiducial detection
 logging.basicConfig(level=logging.DEBUG)
@@ -49,4 +50,5 @@ def get_app() -> FastAPI:
 
 app.include_router(ocr_router, prefix="/ocr", tags=["ocr"])
 app.include_router(fiducial_router, prefix="/fiducial", tags=["fiducial"])
+app.include_router(predict_router, prefix="/predict", tags=["predict"])
 

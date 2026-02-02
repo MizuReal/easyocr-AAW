@@ -11,13 +11,15 @@ import {
   Easing,
   Modal,
   Dimensions,
+  ActivityIndicator,
 } from 'react-native';
 import { Camera, CameraView } from 'expo-camera';
 import { Accelerometer } from 'expo-sensors';
 import * as ImageManipulator from 'expo-image-manipulator';
 import InputField from '../components/InputField';
 import PredictButton from '../components/PredictButton';
-import { uploadDataCardForOCR, validateFiducials } from '../utils/api';
+import { uploadDataCardForOCR, validateFiducials, submitWaterSample } from '../utils/api';
+import WaterResultScreen from './WaterResultScreen';
 
 const colorOptions = ['Clear', 'Slightly tinted', 'Yellow-brown', 'Greenish'];
 const sourceOptions = ['Surface water', 'Groundwater', 'Treated supply', 'Industrial effluent', 'Agricultural runoff'];
@@ -34,6 +36,18 @@ const numericFormFields = [
   'turbidity',
   'freeChlorineResidual',
 ];
+
+const parseNumericInput = (value) => {
+  if (value === undefined || value === null) {
+    return null;
+  }
+  const normalized = String(value).replace(/,/g, '').trim();
+  if (!normalized) {
+    return null;
+  }
+  const parsed = Number(normalized);
+  return Number.isFinite(parsed) ? parsed : null;
+};
 
 const canonicalizeFieldKey = (key = '') => key.toString().trim().toLowerCase().replace(/[^a-z0-9]/g, '');
 
@@ -206,6 +220,10 @@ const DataInputScreen = ({ onNavigate }) => {
   const [alignmentScore, setAlignmentScore] = useState(0);
   const [alignmentStatus, setAlignmentStatus] = useState('');
   const [autoCaptureCountdown, setAutoCaptureCountdown] = useState(0);
+  const [predictionResult, setPredictionResult] = useState(null);
+  const [resultModalVisible, setResultModalVisible] = useState(false);
+  const [submitLoading, setSubmitLoading] = useState(false);
+  const [submitError, setSubmitError] = useState('');
   // Fiducial detection state
   const [fiducialCount, setFiducialCount] = useState(0);
   const [fiducialQuality, setFiducialQuality] = useState(0);
@@ -740,10 +758,60 @@ const DataInputScreen = ({ onNavigate }) => {
     }
   }, [setForm]);
 
-  const handleSubmit = () => {
-    // For now, just a placeholder – hook to backend or prediction later
-    console.log('Sample payload', form);
-  };
+  const handleCloseResult = useCallback(() => {
+    setResultModalVisible(false);
+  }, []);
+
+  const buildSamplePayload = useCallback(() => {
+    return {
+      ph: parseNumericInput(form.pH),
+      hardness: parseNumericInput(form.hardness),
+      solids: parseNumericInput(form.solids),
+      chloramines: parseNumericInput(form.chloramines),
+      sulfate: parseNumericInput(form.sulfate),
+      conductivity: parseNumericInput(form.conductivity),
+      organicCarbon: parseNumericInput(form.organicCarbon),
+      trihalomethanes: parseNumericInput(form.trihalomethanes),
+      turbidity: parseNumericInput(form.turbidity),
+      freeChlorineResidual: parseNumericInput(form.freeChlorineResidual),
+      color: form.color,
+      source: form.source,
+    };
+  }, [form]);
+
+  const handleSubmit = useCallback(async () => {
+    setSubmitError('');
+    setResultModalVisible(false);
+    const payload = buildSamplePayload();
+    const numericValues = [
+      payload.ph,
+      payload.hardness,
+      payload.solids,
+      payload.chloramines,
+      payload.sulfate,
+      payload.conductivity,
+      payload.organicCarbon,
+      payload.trihalomethanes,
+      payload.turbidity,
+      payload.freeChlorineResidual,
+    ].filter((value) => typeof value === 'number' && Number.isFinite(value));
+
+    if (numericValues.length < 3) {
+      setSubmitError('Enter at least three numeric parameters before running checks.');
+      return;
+    }
+
+    setSubmitLoading(true);
+    try {
+      const result = await submitWaterSample(payload);
+      setPredictionResult(result);
+      setResultModalVisible(true);
+    } catch (error) {
+      setSubmitError(error?.message || 'Failed to save and analyze sample.');
+    } finally {
+      setSubmitLoading(false);
+    }
+  }, [buildSamplePayload]);
 
   const alignmentPercent = Math.round(alignmentScore * 100);
   const countdownSeconds = (autoCaptureCountdown / 1000).toFixed(1);
@@ -757,6 +825,11 @@ const DataInputScreen = ({ onNavigate }) => {
   return (
     <>
       {cameraModal}
+      <WaterResultScreen
+        visible={resultModalVisible && Boolean(predictionResult)}
+        result={predictionResult}
+        onClose={handleCloseResult}
+      />
       <KeyboardAvoidingView
         className="flex-1 bg-aquadark"
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
@@ -1118,10 +1191,22 @@ const DataInputScreen = ({ onNavigate }) => {
               Finalize and sync this sample to kick off anomaly detection, historical comparisons, and model retraining cues.
             </Text>
             <PredictButton
-              title="Save sample & run checks"
+              title={submitLoading ? 'Saving sample…' : 'Save sample & run checks'}
               onPress={handleSubmit}
               className="mt-4"
+              disabled={submitLoading}
             />
+            {submitLoading ? (
+              <View className="mt-3 flex-row items-center justify-center gap-2">
+                <ActivityIndicator color="#34d399" size="small" />
+                <Text className="text-[12px] text-emerald-200">
+                  Syncing and running model checks…
+                </Text>
+              </View>
+            ) : null}
+            {submitError ? (
+              <Text className="mt-3 text-center text-[12px] text-rose-300">{submitError}</Text>
+            ) : null}
             <Text className="mt-2 text-center text-[11px] text-slate-500">
               Values feed into image-assisted models for early disease detection.
             </Text>

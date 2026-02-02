@@ -82,4 +82,23 @@ export async function validateFiducials(asset) {
   return response.json();
 }
 
+export async function submitWaterSample(sample) {
+  const response = await fetch(`${API_BASE_URL}/predict/potability`, {
+    method: 'POST',
+    headers: {
+      Accept: 'application/json',
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify(sample),
+  });
+
+  if (!response.ok) {
+    const payload = await response.json().catch(() => ({}));
+    const detail = payload?.detail || payload?.message;
+    throw new Error(detail || 'Unable to submit water sample.');
+  }
+
+  return response.json();
+}
+
 export { API_BASE_URL };

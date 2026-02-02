@@ -13,6 +13,7 @@ class Settings:
 		# Supabase
 		self.supabase_url: str = os.getenv("SUPABASE_URL", "")
 		self.supabase_service_key: str = os.getenv("SUPABASE_SERVICE_KEY", "")
+		self.supabase_samples_table: str = os.getenv("SUPABASE_SAMPLES_TABLE", "field_samples")
 
 		# Database (only needed if you decide to use direct Postgres access)
 		self.db_host: str = os.getenv("DB_HOST", "")
