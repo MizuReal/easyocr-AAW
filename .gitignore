@@ -1,0 +1,65 @@
+# General
+.DS_Store
+Thumbs.db
+*.log
+*.py[cod]
+__pycache__/
+*.sqlite3
+
+# Python / backend
+backend/.venv/
+backend/.env
+backend/**/__pycache__/
+backend/.pytest_cache/
+backend/.mypy_cache/
+backend/.ruff_cache/
+backend/.coverage
+backend/htmlcov/
+
+# FastAPI / build artifacts
+backend/dist/
+backend/build/
+
+# Node / frontend
+frontend/node_modules/
+frontend/.expo/
+frontend/.expo-shared/
+frontend/.env.local
+frontend/.env*.local
+frontend/.parcel-cache/
+frontend/web-build/
+frontend/dist/
+frontend/build/
+
+# Expo / React Native
+.expo/
+.expo-shared/
+*.expo
+*.expo-shared
+*.packager-info
+*.expo-settings
+
+# IDE / tooling
+.vscode/
+.idea/
+*.swp
+*.swo
+*/.history/
+
+# Coverage & reports
+coverage/
+coverage.xml
+reports/
+
+# Misc
+.env
+.env.*
+!.env.example
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Debug
+DEBUG_REFERENCE/
+debug_output/
+```
